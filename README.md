@@ -140,3 +140,150 @@ Example use cases:
 - CRUD APIs for admin tools
 - Backend-for-frontend systems where you control both ends
 - Legacy systems or microservices with stable, reusable endpoints
+
+## 2.2 - GraphQL Query with fetch
+
+GraphQL simplifies API structure by using a single endpoint (commonly /graphql) to handle all queries and mutations. Unlike REST, where different resources have separate endpoints, GraphQL encodes data requirements in the query body, not in the URL path, which is especially useful for relational data.
+
+### 2.2.1 - All Requests Are POST (Even Queries)
+
+- In practice, `GraphQL uses POST requests for everything, including simple queries`. (GET is possible but not recommended.)
+- The query is passed in the body of the request as a JSON object:
+
+  ```json
+  { "query": "your GraphQL query as a string" }
+  ```
+
+### 2.2.2 - Making a GraphQL Request with fetch
+
+Since a GraphQL query is just a string, `you can use standard tools like fetch, no special client required`:
+
+```js
+const url = "http://your-graphql-endpoint.com/graphql";
+const query = `
+  {
+    user(id: "1") {
+      name
+      email
+      posts {
+        title
+        content
+      }
+    }
+  }
+`;
+
+fetch(url, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  },
+  body: JSON.stringify({ query }),
+})
+  .then((response) => response.json())
+  .then((data) => console.log("Data:", data.data))
+  .catch((error) => console.error("Error:", error));
+```
+
+You can even send anonymous queries, they don’t require a name.
+
+### 2.2.3 - When to use fetch vs a GraphQL Client
+
+When to use only fetch
+
+Best for:
+
+- Simple applications
+- Learning, testing, or prototyping
+- Lightweight needs with minimal dependencies
+
+Pros:
+
+- Minimal bundle size (no extra libraries)
+- Full control over request structure, headers, retries, etc.
+- Good for quick testing in devtools or playgrounds
+
+Cons:
+
+- No built-in support for:
+
+  - Caching
+  - Automatic error handling
+  - Query deduplication
+  - Request batching
+
+- You need to manually:
+
+  - Handle loading/error states
+  - Manage headers, variables, retries
+  - Parse responses and errors
+  - Reuse and manage queries
+  - Write your own caching logic (if needed)
+
+---
+
+When to use a GraphQL Client
+
+Best for:
+
+- Mid to large applications
+- Reusable data fetching logic
+- Apps that require performance optimizations like caching or batching
+- Apps that need authentication, optimistic UI, devtools, or SSR support
+
+Pros:
+
+- Caching and normalization out of the box
+- Smart loading/error state management
+- Polling, pagination, and subscriptions
+- Built-in TypeScript support with codegen
+- Devtools for inspecting cache, queries, and mutations
+
+Cons:
+
+- Heavier bundle size
+- Requires setup and learning curve
+- May feel like overkill for simple apps or MVPs
+
+---
+
+Middle Ground Options
+
+- Use fetch + a lightweight wrapper (e.g., graphql-request)
+
+  - ✅ Small, easier than raw fetch
+  - ❌ Still lacks advanced features like cache
+
+- Use a custom React hook (like useFetchGraphQL) to abstract the boilerplate.
+
+#### Decision Table
+
+| App Complexity                 | Suggested Approach       |
+| ------------------------------ | ------------------------ |
+| Static site / MVP              | fetch or graphql-request |
+| Small app (few queries)        | fetch + custom hooks     |
+| Mid-size React app             | Apollo Client / URQL     |
+| Needs caching or SSR           | GraphQL client           |
+| Mobile app (e.g. React Native) | Apollo Client or Relay   |
+
+### 2.2.4 - Error Handling in GraphQL
+
+GraphQL behaves differently from REST in how it handles errors:
+
+| REST                    | GraphQL                         |
+| ----------------------- | ------------------------------- |
+| Uses HTTP status codes  | Always returns 200 OK           |
+| 4xx/5xx for errors      | Errors included in JSON payload |
+| Error = response.status | Error = response.errors field   |
+
+- `Even server errors return a 200 HTTP status`.
+- You must check the presence of the errors field in the response:
+
+  ```js
+  if (data.errors) {
+    // handle errors
+  }
+  ```
+
+This means browser tools like DevTools won’t show red network errors, which can confuse debugging. It’s your responsibility (or your GraphQL client’s) to detect and handle those errors from the response body.
