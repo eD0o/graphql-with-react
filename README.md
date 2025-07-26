@@ -287,3 +287,9 @@ GraphQL behaves differently from REST in how it handles errors:
   ```
 
 This means browser tools like DevTools won’t show red network errors, which can confuse debugging. It’s your responsibility (or your GraphQL client’s) to detect and handle those errors from the response body.
+
+// definition and usage of useMemo
+// ssr in react
+// hydration components
+// normalized caching
+// differnce among useState, useReducer, useContext and Redux
